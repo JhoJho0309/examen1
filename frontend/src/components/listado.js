@@ -17,47 +17,113 @@ let ultimaPagina = 1;
 export const formatearFecha = (iso) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("es-CR", { day: "numeric", month: "short", year: "numeric" });
 
+/** Construye una tarjeta a partir de la plantilla #tpl-equipo. */
+const crearTarjeta = (equipo) => {
+  const $fragmento = $plantilla.content.cloneNode(true);
+  const $li = $fragmento.querySelector("li");
+  const $estado = $fragmento.querySelector(".estado");
+
+  $li.dataset.id = equipo.id;
+  $fragmento.querySelector(".codigo").textContent = equipo.codigo;
+  $fragmento.querySelector(".nombre").textContent = equipo.nombre;
+  $fragmento.querySelector(".categoria").textContent = equipo.categoria?.nombre ?? "Sin categoría";
+  $fragmento.querySelector(".fecha").textContent = formatearFecha(equipo.fecha_adquisicion);
+
+  $estado.textContent = equipo.estado;
+  $estado.dataset.estado = equipo.estado;
+
+  return $fragmento;
+};
+
+/** Muestra el estado vacío cuando la página no trae equipos. */
+const mostrarVacio = () => {
+  const $vacio = document.createElement("li");
+  $vacio.className = "vacio";
+  $vacio.textContent = "No hay equipos registrados.";
+  $lista.append($vacio);
+};
+
 /**
- * TODO [F2] Listado y paginación.
- *
- * cargarPagina(pagina):
- *  - Marque la lista como ocupada (aria-busy="true") mientras carga y desmárquela al terminar.
- *  - Obtenga la página con listarEquipos(pagina, POR_PAGINA).
- *  - Vacíe la lista y, por cada equipo, clone #tpl-equipo y llene:
- *      .codigo, .nombre, .categoria (nombre de la categoría), .fecha (con formatearFecha)
- *      .estado  -> texto del estado y atributo data-estado="<estado>" (el CSS le da color)
- *      li       -> atributo data-id="<id>"
- *    Use SIEMPRE textContent con los datos de la API (nunca innerHTML).
- *  - Si no hay equipos, muestre un <li class="vacio"> con "No hay equipos registrados."
- *  - #resumen:      "Mostrando <from>–<to> de <total>"
- *  - #pagina-actual: "Página <current_page> de <last_page>"
- *  - Deshabilite #btn-anterior en la primera página y #btn-siguiente en la última.
- *  - Si falla, muestre el error con mostrarMensaje("error", ...).
+ * Carga una página del inventario y la pinta en la lista.
+ * Marca aria-busy mientras espera y actualiza resumen, paginador y botones.
  */
 export const cargarPagina = async (pagina = 1) => {
-  // TODO
+  $lista.setAttribute("aria-busy", "true");
+
+  try {
+    const { data = [], meta = {} } = await listarEquipos(pagina, POR_PAGINA);
+
+    paginaActual = meta.current_page ?? pagina;
+    ultimaPagina = meta.last_page ?? 1;
+
+    $lista.replaceChildren();
+
+    if (data.length === 0) {
+      mostrarVacio();
+    } else {
+      for (const equipo of data) {
+        $lista.append(crearTarjeta(equipo));
+      }
+    }
+
+    $resumen.textContent = data.length
+      ? `Mostrando ${meta.from}–${meta.to} de ${meta.total}`
+      : "Mostrando 0 de 0";
+    $paginaActual.textContent = `Página ${paginaActual} de ${ultimaPagina}`;
+
+    $btnAnterior.disabled = paginaActual <= 1;
+    $btnSiguiente.disabled = paginaActual >= ultimaPagina;
+  } catch (error) {
+    mostrarMensaje("error", error.message ?? "No fue posible cargar el inventario.");
+  } finally {
+    $lista.setAttribute("aria-busy", "false");
+  }
 };
 
 /**
- * TODO [F4] Eliminación con manejo de reglas de negocio.
- *
- * Use DELEGACIÓN DE EVENTOS: un solo listener en $lista que detecte clics en .btn-eliminar.
- *  - Pida confirmación con confirm().
- *  - Llame a eliminarEquipo(id).
- *  - 204: muestre "Equipo eliminado." y recargue la página actual
- *         (si era el último de la página y no es la primera, vaya a la anterior).
- *  - 409: muestre el mensaje que envía la API (error.datos.mensaje).
- *  - Otro error: muestre un mensaje general.
+ * Delegación de eventos: un solo listener en la lista atiende el botón
+ * Eliminar de todas las tarjetas, incluidas las que todavía no existen.
  */
 const alHacerClicEnLista = async (evento) => {
-  // TODO
+  const $boton = evento.target.closest(".btn-eliminar");
+  if (!$boton) return;
+
+  const id = $boton.closest("li")?.dataset.id;
+  if (!id) return;
+
+  if (!confirm("¿Seguro que desea eliminar este equipo?")) return;
+
+  $boton.disabled = true;
+
+  try {
+    await eliminarEquipo(id);
+    mostrarMensaje("exito", "Equipo eliminado.");
+
+    // Si era el último de la página, retrocede una página.
+    const eraElUltimo = $lista.querySelectorAll("li[data-id]").length === 1;
+    const destino = eraElUltimo && paginaActual > 1 ? paginaActual - 1 : paginaActual;
+
+    await cargarPagina(destino);
+  } catch (error) {
+    const mensaje = error.status === 409
+      ? error.datos.mensaje
+      : "No fue posible eliminar el equipo.";
+
+    mostrarMensaje("error", mensaje);
+    $boton.disabled = false;
+  }
 };
 
-// Parcialmente implementado: complete el TODO de los botones de paginación.
 export const iniciarListado = () => {
   $lista.addEventListener("click", alHacerClicEnLista);
 
-  // TODO [F2] Conecte #btn-anterior y #btn-siguiente con cargarPagina()
+  $btnAnterior.addEventListener("click", () => {
+    if (paginaActual > 1) cargarPagina(paginaActual - 1);
+  });
+
+  $btnSiguiente.addEventListener("click", () => {
+    if (paginaActual < ultimaPagina) cargarPagina(paginaActual + 1);
+  });
 
   cargarPagina(1);
 };

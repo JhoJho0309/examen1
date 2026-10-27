@@ -1,42 +1,63 @@
 /* =========================================================================
-   TODO [F5] Maquetación responsiva (mobile first)
+   Maquetación responsiva (mobile first).
 
-   Requisitos:
-   1. .layout
-      - Ancho máximo de 1200px, centrado, con margen interior de 1rem.
-      - En pantallas pequeñas: una sola columna (formulario arriba, listado abajo).
-      - Desde 900px: dos columnas con CSS Grid — formulario de 320px y listado
-        con el resto del espacio. Separación entre columnas de 1.5rem.
-   2. .panel-form
-      - Desde 900px debe quedarse fijo al desplazarse (position: sticky),
-        alineado al inicio de su celda.
-   3. .lista-equipos
-      - Sin viñetas, sin margen ni relleno por omisión.
-      - CSS Grid con tantas columnas como quepan, cada una de mínimo 220px
-        (sin media query: use auto-fill y minmax).
-   4. .barra-listado y .paginacion
-      - Flexbox: elementos en los extremos y centrados verticalmente.
-      - La barra puede pasar a dos líneas si no cabe.
-   5. Ningún elemento debe provocar desplazamiento horizontal a 360px de ancho.
+   Una columna en móvil; desde 900px, Grid de 320px + 1fr con el formulario
+   fijo al desplazarse. La lista de equipos usa auto-fill, sin media query.
    ========================================================================= */
 
 .layout {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 1rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
 }
 
 .panel-form {
+  min-width: 0;
 }
 
 .panel-listado {
+  /* Sin esto, una tarjeta ancha estira la columna y aparece scroll horizontal. */
+  min-width: 0;
 }
 
 .barra-listado {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: var(--espacio);
 }
 
 .lista-equipos {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--espacio);
 }
 
 .paginacion {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
 }
 
 @media (min-width: 900px) {
+  .layout {
+    grid-template-columns: 320px 1fr;
+  }
+
+  .panel-form {
+    position: sticky;
+    top: 1rem;
+    align-self: start;
+  }
 }
