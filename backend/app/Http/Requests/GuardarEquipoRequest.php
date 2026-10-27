@@ -5,6 +5,18 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
+/**
+ * Validación de creación y actualización de equipos.
+ *
+ * El mismo Form Request se usa en store() y en update(). Al actualizar,
+ * la regla unique sobre "codigo" ignora el equipo actual, que se obtiene
+ * de $this->route('equipo') gracias al route model binding.
+ *
+ * El campo "estado" solo admite "disponible" o "mantenimiento":
+ * "prestado" se asigna únicamente mediante POST /equipos/{id}/prestamo.
+ *
+ * Todos los mensajes están en español y asociados a cada campo.
+ */
 class GuardarEquipoRequest extends FormRequest
 {
     public function authorize(): bool

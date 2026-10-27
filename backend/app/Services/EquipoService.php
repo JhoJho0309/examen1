@@ -6,6 +6,20 @@ use App\Exceptions\ReglaNegocioException;
 use App\Models\Equipo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
+/**
+ * Capa de negocio de equipos.
+ *
+ * Esta clase no conoce HTTP: no usa request(), response() ni abort().
+ * Cuando una regla del dominio impide la operación lanza
+ * ReglaNegocioException, que bootstrap/app.php traduce a 409.
+ *
+ * Reglas de negocio:
+ *  R1. No se puede eliminar un equipo prestado.
+ *  R2. Solo se puede prestar un equipo disponible; en mantenimiento y
+ *      ya prestado tienen cada uno su propio mensaje.
+ *
+ * El listado carga la categoría de forma anticipada para evitar N+1.
+ */
 class EquipoService
 {
     public function listar(?string $q, ?string $estado, int $porPagina): LengthAwarePaginator
